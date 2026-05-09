@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        .output-text {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #e5e7eb; /* Light gray default text color for terminal */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="mb-8 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <h1 class="text-4xl font-bold text-slate-800 mb-2">Script Runner</h1>
+                <p class="text-slate-600">Execute and monitor your local scripts from anywhere on your network</p>
+            </div>
+            <button onclick="openConfigEditor()" class="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 flex-shrink-0 mt-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Manage Scripts
+            </button>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200 hidden">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span id="connectionText" class="text-yellow-800 font-medium">Connecting...</span>
+            </div>
+        </div>
+
+        <!-- Scripts Grid -->
+        <div id="scriptsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Script cards will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Parameter Input Modal -->
+    <div id="parameterModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-800" id="paramModalTitle">Script Parameters</h3>
+                    <button onclick="closeParameterModal()" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="parameterForm" class="space-y-4">
+                    <!-- Parameters will be inserted here -->
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button onclick="submitParameters()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                        Run Script
+                    </button>
+                    <button onclick="closeParameterModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-4 rounded-lg transition duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Browser Modal -->
+    <div id="fileBrowserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-200">
+                <h2 id="fileBrowserTitle" class="text-2xl font-bold text-slate-800">Browse Server Files</h2>
+                <p id="fileBrowserMode" class="text-sm text-slate-600 mt-1"></p>
+            </div>
+
+            <!-- Breadcrumb Navigation -->
+            <div class="px-6 py-3 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center space-x-2 text-sm">
+                    <span class="text-slate-600">Path:</span>
+                    <div id="breadcrumbNav" class="flex-1 flex items-center space-x-1 overflow-x-auto">
+                        <!-- Breadcrumbs populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- File List -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="fileList" class="space-y-1">
+                    <!-- File entries populated here -->
+                </div>
+                <div id="fileListEmpty" class="hidden text-center text-slate-500 py-8">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    <p>This folder is empty</p>
+                </div>
+                <div id="fileListLoading" class="hidden text-center text-slate-500 py-8">
+                    <p>Loading...</p>
+                </div>
+                <div id="fileListError" class="hidden text-center text-red-600 py-8">
+                    <p id="fileListErrorMsg"></p>
+                </div>
+            </div>
+
+            <!-- Manual Path Entry -->
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Or enter path manually:</label>
+                <input
+                    type="text"
+                    id="manualPathInput"
+                    placeholder="/path/to/file"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-slate-200 flex justify-between">
+                <button
+                    onclick="closeFileBrowser()"
+                    class="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition duration-200"
+                >
+                    Cancel
+                </button>
+                <button
+                    id="selectPathButton"
+                    onclick="selectPath()"
+                    class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition duration-200"
+                >
+                    Select
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output Modal -->
+    <div id="outputModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-slate-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-slate-800" id="outputModalTitle">Script Output</h3>
+                    <button onclick="closeOutputModal()" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-900">
+                <pre id="outputContent" class="output-text text-sm"></pre>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-slate-50">
+                <button onclick="clearOutput()" class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                    Clear Output
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Editor Drawer -->
+    <div id="configModal" class="fixed inset-0 z-[60] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closeConfigModal()"></div>
+        <!-- Drawer panel -->
+        <div class="absolute inset-y-0 right-0 bg-white w-full md:max-w-2xl flex flex-col shadow-2xl">
+            <!-- Drawer header -->
+            <div class="p-4 border-b border-slate-700 bg-slate-800 flex items-center gap-3 flex-shrink-0">
+                <button id="configBackBtn" onclick="showConfigList()" class="hidden text-slate-300 hover:text-white p-1 rounded transition-colors" title="Back to list">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <h2 id="configModalTitle" class="text-lg font-bold text-white flex-1">Manage Scripts</h2>
+                <button onclick="closeConfigModal()" class="text-slate-300 hover:text-white p-1 rounded transition-colors" title="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- List View -->
+            <div id="configListView" class="flex-1 overflow-y-auto flex flex-col">
+                <div class="p-4 border-b border-slate-100 flex-shrink-0">
+                    <button onclick="showScriptForm(null)" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Add New Script
+                    </button>
+                </div>
+                <div id="configScriptsList" class="divide-y divide-slate-100">
+                    <div class="p-8 text-center text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Form View (hidden by default) -->
+            <div id="configFormView" class="hidden flex-1 overflow-y-auto p-5 space-y-5">
+
+                <!-- Identity -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Identity</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Display Name <span class="text-red-500">*</span></label>
+                        <input id="cfName" type="text" oninput="autoFillId()" placeholder="My Script"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">ID <span class="text-red-500">*</span></label>
+                            <input id="cfId" type="text" placeholder="my-script"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-xs text-slate-400 mt-1">Lowercase letters, numbers, hyphens</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                            <input id="cfCategory" type="text" list="cfCategoryList" placeholder="Tools"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <datalist id="cfCategoryList">
+                                <option value="System"/><option value="Development"/><option value="Database"/>
+                                <option value="Web"/><option value="Multimedia"/><option value="AI"/><option value="Tools"/>
+                            </datalist>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                        <textarea id="cfDescription" rows="2" placeholder="What this script does..."
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+
+                <!-- Execution -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Execution</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Command <span class="text-red-500">*</span></label>
+                        <input id="cfCommand" type="text" placeholder="python3 my_script.py"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Working Directory</label>
+                        <input id="cfWorkingDir" type="text" placeholder="~ or /path/to/dir (optional)"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">URL <span class="text-slate-400 font-normal">(web apps only)</span></label>
+                        <input id="cfUrl" type="text" placeholder="http://localhost:8080"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <p class="text-xs text-slate-400 mt-1">If set, an "Open" button appears after starting the script</p>
+                    </div>
+                </div>
+
+                <!-- Parameters -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Parameters</h3>
+                        <button onclick="addConfigParam()" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add Parameter
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400">Parameters let users provide input values (files, text, numbers) before running.</p>
+                    <div id="cfParams" class="space-y-3">
+                        <!-- Parameter cards rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Footer (hidden by default) -->
+            <div id="configFormFooter" class="hidden border-t border-slate-200 p-4 flex gap-3 flex-shrink-0 bg-white">
+                <button onclick="saveScriptForm()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200">
+                    Save Script
+                </button>
+                <button onclick="showConfigList()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let scripts = [];
+        let runningScripts = new Set();
+        let currentScriptId = null;
+        let scriptOutputs = {};
+
+        // File browser state
+        let currentBrowsePath = '/';
+        let currentBrowserMode = 'file'; // 'file' or 'folder'
+        let currentBrowserInputId = null;
+        let selectedEntryPath = null;  // Currently selected file/folder (not confirmed yet)
+        const DEFAULT_BROWSE_PATH = '/data';  // Default starting path for file browser (matches backend DEFAULT_BROWSE_PATH)
+
+        // Client-side memory limit for output (2MB)
+        const CLIENT_OUTPUT_LIMIT = 2 * 1024 * 1024;
+
+        // Client session management for web apps
+        let clientSessionId = null;
+
+        // Convert ANSI color codes to HTML
+        function ansiToHtml(text) {
+            // Escape HTML first to prevent XSS
+            const escaped = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+            // Track open spans
+            let openSpans = 0;
+
+            // Replace ANSI codes with HTML
+            const html = escaped.replace(/\x1b\[([0-9;]+)m/g, (match, code) => {
+                // Handle multiple codes separated by semicolons
+                const codes = code.split(';');
+                let result = '';
+
+                for (let c of codes) {
+                    if (c === '0') {
+                        // Reset - close all open spans
+                        while (openSpans > 0) {
+                            result += '</span>';
+                            openSpans--;
+                        }
+                    } else if (c === '1') {
+                        // Bold
+                        result += '<span style="font-weight: bold;">';
+                        openSpans++;
+                    } else if (c === '91') {
+                        // Red
+                        result += '<span style="color: #ef4444;">';
+                        openSpans++;
+                    } else if (c === '92') {
+                        // Green
+                        result += '<span style="color: #22c55e;">';
+                        openSpans++;
+                    } else if (c === '93') {
+                        // Yellow
+                        result += '<span style="color: #eab308;">';
+                        openSpans++;
+                    } else if (c === '94') {
+                        // Blue
+                        result += '<span style="color: #3b82f6;">';
+                        openSpans++;
+                    } else if (c === '95') {
+                        // Magenta
+                        result += '<span style="color: #a855f7;">';
+                        openSpans++;
+                    } else if (c === '96') {
+                        // Cyan
+                        result += '<span style="color: #06b6d4;">';
+                        openSpans++;
+                    } else if (c === '97') {
+                        // White
+                        result += '<span style="color: #f3f4f6;">';
+                        openSpans++;
+                    }
+                }
+                return result;
+            });
+
+            // Close any remaining open spans
+            let closeSpans = '';
+            while (openSpans > 0) {
+                closeSpans += '</span>';
+                openSpans--;
+            }
+
+            return html + closeSpans;
+        }
+
+        // Generate or retrieve client session ID
+        function getClientSessionId() {
+            if (!clientSessionId) {
+                // Try to get from sessionStorage
+                clientSessionId = sessionStorage.getItem('client_session_id');
+                if (!clientSessionId) {
+                    // Generate new UUID
+                    clientSessionId = generateUUID();
+                    sessionStorage.setItem('client_session_id', clientSessionId);
+                }
+            }
+            return clientSessionId;
+        }
+
+        // Simple UUID v4 generator
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Deregister this client when the page is closed or navigated away.
+        // Uses sendBeacon so the request is reliably sent during page unload.
+        window.addEventListener('beforeunload', () => {
+            const clientId = getClientSessionId();
+            if (clientId) {
+                const data = new Blob([JSON.stringify({ client_id: clientId })], {
+                    type: 'application/json'
+                });
+                navigator.sendBeacon('/api/client/deregister', data);
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            connectWebSocket();
+            loadScripts();
+            // Track if user manually edits the script ID field in config editor
+            document.getElementById('cfId').addEventListener('input', () => {
+                configIdManuallyEdited = true;
+            });
+        });
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('WebSocket connected');
+                updateConnectionStatus('connected');
+
+                // Subscribe to all running scripts
+                runningScripts.forEach(scriptId => {
+                    socket.send(JSON.stringify({
+                        type: 'subscribe',
+                        script_id: scriptId
+                    }));
+                });
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus('disconnected');
+
+                // Attempt to reconnect after 3 seconds
+                setTimeout(() => {
+                    console.log('Attempting to reconnect...');
+                    connectWebSocket();
+                }, 3000);
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('WebSocket message received:', data.type, 'for script:', data.script_id);
+
+                    switch(data.type) {
+                        case 'connected':
+                            console.log(data.message);
+                            break;
+                        case 'output':
+                            console.log('Handling output message, data length:', data.data ? data.data.length : 0);
+                            handleOutput(data);
+                            break;
+                        case 'process_complete':
+                            console.log('Handling process_complete, return code:', data.return_code);
+                            handleProcessComplete(data);
+                            break;
+                        case 'error':
+                            console.error('Script error:', data);
+                            handleScriptError(data);
+                            break;
+                        case 'output_overflow':
+                            console.warn('Output overflow for script:', data.script_id);
+                            if (!scriptOutputs[data.script_id]) {
+                                scriptOutputs[data.script_id] = '';
+                            }
+                            scriptOutputs[data.script_id] += data.message;
+                            break;
+                        default:
+                            console.log('Unknown message type:', data.type);
+                    }
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+        }
+
+        function updateConnectionStatus(status) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            
+            if (status === 'connected') {
+                statusDiv.classList.add('hidden');
+            } else {
+                statusDiv.classList.remove('hidden');
+                statusText.textContent = status === 'disconnected' ? 'Connection lost. Reconnecting...' : 'Connecting...';
+            }
+        }
+
+        async function loadScripts() {
+            try {
+                // Add cache buster to prevent stale data
+                const response = await fetch('/api/scripts?t=' + Date.now());
+                scripts = await response.json();
+                console.log('Loaded scripts:', scripts.map(s => s.id));
+                renderScripts();
+
+                // Restore UI state for scripts this client is registered for
+                await restoreRegisteredScripts();
+
+                // Check actual running status of all scripts (detect orphaned processes)
+                await checkAllScriptStatus();
+            } catch (error) {
+                console.error('Error loading scripts:', error);
+                alert('Failed to load scripts. Please check the server connection.');
+            }
+        }
+
+        async function checkAllScriptStatus() {
+            // Check each script to see if it's actually running
+            for (const script of scripts) {
+                try {
+                    const response = await fetch(`/api/scripts/${script.id}/status`);
+                    const data = await response.json();
+
+                    if (data.running && !runningScripts.has(script.id)) {
+                        // Script is running but this client isn't registered
+                        console.warn(`Orphaned process detected: ${script.id}`);
+                        // Show a "Join" button instead of Run button
+                        showJoinButton(script.id);
+                    }
+                } catch (error) {
+                    console.error(`Error checking status for ${script.id}:`, error);
+                }
+            }
+        }
+
+        function showJoinButton(scriptId) {
+            const runBtn = document.getElementById(`run-${scriptId}`);
+            if (runBtn) {
+                runBtn.innerHTML = `
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd"/>
+                    </svg>
+                    Join Running Service
+                `;
+                runBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                runBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                runBtn.title = "This service is already running. Click to register and control it.";
+            }
+        }
+
+        async function restoreRegisteredScripts() {
+            try {
+                const response = await fetch('/api/client/registered', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        client_id: getClientSessionId()
+                    })
+                });
+
+                const data = await response.json();
+                const registeredScripts = data.registered_scripts || [];
+
+                console.log('Registered scripts for this client:', registeredScripts);
+
+                // Update UI for each registered script
+                registeredScripts.forEach(scriptId => {
+                    runningScripts.add(scriptId);
+                    updateScriptUI(scriptId, true);
+                });
+
+                if (registeredScripts.length > 0) {
+                    console.log(`Restored UI state for ${registeredScripts.length} registered script(s)`);
+                }
+            } catch (error) {
+                console.error('Error restoring registered scripts:', error);
+            }
+        }
+
+        function renderScripts() {
+            const grid = document.getElementById('scriptsGrid');
+            grid.innerHTML = '';
+
+            scripts.forEach(script => {
+                const card = createScriptCard(script);
+                grid.appendChild(card);
+            });
+        }
+
+        function createScriptCard(script) {
+            const div = document.createElement('div');
+            div.className = 'bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden';
+            div.id = `script-${script.id}`;
+
+            const isRunning = runningScripts.has(script.id);
+            const categoryColor = getCategoryColor(script.category);
+
+            div.innerHTML = `
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-slate-800 mb-1">${escapeHtml(script.name)}</h3>
+                            ${script.category ? `<span class="inline-block px-2 py-1 text-xs font-semibold rounded-full ${categoryColor}">${escapeHtml(script.category)}</span>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${script.url ? `<button onclick="openScriptUrl('${script.url}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="Open in browser">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                            </button>` : ''}
+                        </div>
+                    </div>
+                    
+                    ${script.description ? `<p class="text-slate-600 mb-4 text-sm">${escapeHtml(script.description)}</p>` : ''}
+                    
+                    <div class="flex gap-2">
+                        <button 
+                            onclick="runScript('${script.id}')" 
+                            id="run-${script.id}"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center ${isRunning ? 'hidden' : ''}"
+                        >
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                            </svg>
+                            Run
+                        </button>
+                        
+                        <div id="running-${script.id}" class="flex-1 flex gap-2 ${isRunning ? '' : 'hidden'}">
+                            <button
+                                id="output-${script.id}"
+                                onclick="showOutput('${script.id}')"
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Output
+                            </button>
+                            <button
+                                id="stop-${script.id}"
+                                onclick="stopScript('${script.id}')"
+                                class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"/>
+                                </svg>
+                                Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        function getCategoryColor(category) {
+            const colors = {
+                'System': 'bg-purple-100 text-purple-800',
+                'Development': 'bg-blue-100 text-blue-800',
+                'Database': 'bg-green-100 text-green-800',
+                'Web': 'bg-orange-100 text-orange-800',
+                'Multimedia': 'bg-pink-100 text-pink-800',
+                'AI': 'bg-indigo-100 text-indigo-800',
+                'Tools': 'bg-cyan-100 text-cyan-800',
+                'default': 'bg-slate-100 text-slate-800'
+            };
+            return colors[category] || colors['default'];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function runScript(scriptId) {
+            console.log('runScript called with:', scriptId);
+            console.log('Available scripts:', scripts);
+            console.log('Looking for script with id:', scriptId);
+            console.log('Script IDs in array:', scripts.map(s => s.id));
+
+            const script = scripts.find(s => s.id === scriptId);
+            console.log('Found script:', script);
+
+            if (!script) {
+                console.error('Script not found in local array:', scriptId);
+                console.error('Scripts array:', JSON.stringify(scripts, null, 2));
+                alert(`Error: Script ${scriptId} not found. Please refresh the page.`);
+                return;
+            }
+
+            // Check if script has parameters
+            if (script.parameters && script.parameters.length > 0) {
+                console.log('Script has parameters, showing modal');
+                showParameterModal(script);
+            } else {
+                console.log('Script has no parameters, executing directly');
+                executeScript(scriptId, {});
+            }
+        }
+
+        function showParameterModal(script) {
+            currentScriptId = script.id;
+            const modal = document.getElementById('parameterModal');
+            const form = document.getElementById('parameterForm');
+            const title = document.getElementById('paramModalTitle');
+
+            title.textContent = `Parameters for ${script.name}`;
+            form.innerHTML = '';
+
+            script.parameters.forEach((param, index) => {
+                const paramDiv = document.createElement('div');
+                // Use index for ID to avoid empty string collision for positional args
+                const paramId = `param-${script.id}-${index}`;
+
+                // Check parameter type
+                if (param.type === 'file-browser' || param.type === 'folder-browser') {
+                    paramDiv.innerHTML = `
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            ${escapeHtml(param.label || param.name || 'Path')}
+                            ${param.required ? '<span class="text-red-500">*</span>' : ''}
+                        </label>
+                        ${param.description ? `<p class="text-xs text-slate-500 mb-2">${escapeHtml(param.description)}</p>` : ''}
+                        <div class="flex gap-2">
+                            <input
+                                type="text"
+                                id="${paramId}"
+                                name="${param.name}"
+                                data-param-index="${index}"
+                                ${param.required ? 'required' : ''}
+                                ${param.default ? `value="${escapeHtml(String(param.default))}"` : ''}
+                                class="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="${param.placeholder || (param.type === 'folder-browser' ? '/path/to/folder' : '/path/to/file')}"
+                            />
+                            <button
+                                type="button"
+                                onclick="openFileBrowser('${paramId}', '${param.type === 'folder-browser' ? 'folder' : 'file'}')"
+                                class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition duration-200 flex items-center gap-2"
+                            >
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                Browse
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Existing text/number input rendering
+                    paramDiv.innerHTML = `
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            ${escapeHtml(param.label || param.name || 'Argument')}
+                            ${param.required ? '<span class="text-red-500">*</span>' : ''}
+                        </label>
+                        ${param.description ? `<p class="text-xs text-slate-500 mb-2">${escapeHtml(param.description)}</p>` : ''}
+                        <input
+                            type="${param.type === 'number' ? 'number' : 'text'}"
+                            id="${paramId}"
+                            name="${param.name}"
+                            data-param-index="${index}"
+                            ${param.required ? 'required' : ''}
+                            ${param.default ? `value="${escapeHtml(String(param.default))}"` : ''}
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="${param.placeholder || ''}"
+                        />
+                    `;
+                }
+                form.appendChild(paramDiv);
+            });
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeParameterModal() {
+            const modal = document.getElementById('parameterModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentScriptId = null;
+        }
+
+        function submitParameters() {
+            console.log('submitParameters called, currentScriptId:', currentScriptId);
+
+            if (!currentScriptId) {
+                console.error('No currentScriptId set!');
+                return;
+            }
+
+            const script = scripts.find(s => s.id === currentScriptId);
+            const form = document.getElementById('parameterForm');
+            const inputs = form.querySelectorAll('input');
+            const parameters = {};
+
+            console.log('Found inputs:', inputs.length);
+
+            // Validate required fields
+            let hasErrors = false;
+            for (const input of inputs) {
+                const paramIndex = input.getAttribute('data-param-index');
+                console.log('Processing input:', input.name, 'index:', paramIndex, 'value:', input.value, 'required:', input.required);
+
+                if (input.required && !input.value.trim()) {
+                    input.classList.add('border-red-500');
+                    hasErrors = true;
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+
+                // Collect all non-empty values (including those with value="")
+                // Only skip if the field is optional AND empty
+                if (input.value !== '' || input.required) {
+                    // For positional arguments (empty name), use parameter index as key to avoid collisions
+                    const paramKey = input.name === "" ? paramIndex : input.name;
+                    parameters[paramKey] = input.value;
+                    console.log('Added parameter:', paramKey, '=', input.value);
+                }
+            }
+
+            console.log('Final parameters object:', parameters);
+            console.log('Has errors:', hasErrors);
+
+            if (hasErrors) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Save scriptId before closing modal (which sets currentScriptId to null)
+            const scriptIdToRun = currentScriptId;
+            closeParameterModal();
+            executeScript(scriptIdToRun, parameters);
+        }
+
+        async function executeScript(scriptId, parameters) {
+            console.log('executeScript called with scriptId:', scriptId);
+            console.log('executeScript parameters:', parameters);
+
+            // Set UI to running state optimistically
+            runningScripts.add(scriptId);
+            scriptOutputs[scriptId] = '';
+            updateScriptUI(scriptId, true);
+
+            try {
+                const url = `/api/scripts/${scriptId}/run`;
+                const body = {
+                    parameters,
+                    client_id: getClientSessionId()  // Add client session ID
+                };
+
+                console.log('Fetching URL:', url);
+                console.log('Request body:', JSON.stringify(body));
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok) {
+                    // Check if the service was already running
+                    if (data.already_running && data.registered) {
+                        console.log('Service is already running, client registered:', data.message);
+                        alert(data.message + '\n\nYou have been registered as a user of this service.\nClick "Open" to access it, or "Stop" when you\'re done using it.');
+                    } else if (data.already_running) {
+                        console.log('Service is already running:', data.message);
+                        alert(data.message + '\n\nClick "Open" to access the service.');
+                    } else {
+                        console.log('Script started successfully');
+                        // Subscribe to this script's output via WebSocket
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            console.log('Subscribing to script output via WebSocket');
+                            socket.send(JSON.stringify({
+                                type: 'subscribe',
+                                script_id: scriptId
+                            }));
+                        }
+                    }
+                } else {
+                    // Error occurred - reset UI state and show error
+                    console.error('Server returned error:', data);
+                    runningScripts.delete(scriptId);
+                    updateScriptUI(scriptId, false);
+
+                    // Show error in output modal with better formatting
+                    const errorMessage = data.detail || data.error || 'Unknown error';
+                    scriptOutputs[scriptId] = `❌ Error starting script:\n\n${errorMessage}\n\n--- Script failed to start ---`;
+                    showOutput(scriptId);
+                }
+            } catch (error) {
+                // Network or other error - reset UI state and show error
+                console.error('Error running script:', error);
+                runningScripts.delete(scriptId);
+                updateScriptUI(scriptId, false);
+
+                // Show error in output modal
+                scriptOutputs[scriptId] = `❌ Failed to run script:\n\n${error.message}\n\nPlease check the server connection.\n\n--- Script failed to start ---`;
+                showOutput(scriptId);
+            }
+        }
+
+        async function stopScript(scriptId) {
+            try {
+                const response = await fetch(`/api/scripts/${scriptId}/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        client_id: getClientSessionId()  // Add client session ID
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Check if we were only deregistered (process still running for other clients)
+                    if (data.deregistered_only) {
+                        console.log('Deregistered from web app, other clients still using it:', data.message);
+                        alert(data.message);
+                    } else {
+                        console.log('Script stopped:', data.message);
+                        if (data.message) {
+                            alert(data.message);
+                        }
+                    }
+
+                    // Always update local UI to hide Stop button for this client
+                    runningScripts.delete(scriptId);
+                    updateScriptUI(scriptId, false);
+
+                    // Unsubscribe from this script's output
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                            type: 'unsubscribe',
+                            script_id: scriptId
+                        }));
+                    }
+                } else {
+                    alert(`Error: ${data.detail || data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error stopping script:', error);
+                alert('Failed to stop script. Please check the server connection.');
+            }
+        }
+
+        function showOutput(scriptId) {
+            const script = scripts.find(s => s.id === scriptId);
+            const modal = document.getElementById('outputModal');
+            const title = document.getElementById('outputModalTitle');
+            const content = document.getElementById('outputContent');
+
+            title.textContent = `Output: ${script.name}`;
+            const outputText = scriptOutputs[scriptId] || 'Waiting for output...';
+            content.innerHTML = ansiToHtml(outputText);
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // Auto-scroll to bottom
+            setTimeout(() => {
+                content.scrollTop = content.scrollHeight;
+            }, 100);
+        }
+
+        function closeOutputModal() {
+            const modal = document.getElementById('outputModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function clearOutput() {
+            const content = document.getElementById('outputContent');
+            content.innerHTML = '';
+        }
+
+        function handleOutput(data) {
+            console.log('handleOutput called for script:', data.script_id);
+            console.log('Current output length:', scriptOutputs[data.script_id] ? scriptOutputs[data.script_id].length : 0);
+
+            if (!scriptOutputs[data.script_id]) {
+                scriptOutputs[data.script_id] = '';
+            }
+            scriptOutputs[data.script_id] += data.data;
+
+            console.log('New output length:', scriptOutputs[data.script_id].length);
+
+            // Client-side memory management: truncate if too large
+            if (scriptOutputs[data.script_id].length > CLIENT_OUTPUT_LIMIT) {
+                // Keep last 75% of output and add a notice about truncation
+                const truncatePoint = Math.floor(CLIENT_OUTPUT_LIMIT * 0.25);
+                const truncatedNotice = '--- [Output truncated - earlier output removed to save memory] ---\n\n';
+                scriptOutputs[data.script_id] = truncatedNotice + scriptOutputs[data.script_id].substring(truncatePoint);
+                console.warn(`Output for ${data.script_id} truncated due to client memory limit`);
+            }
+
+            // Update modal if it's open for this script
+            const modal = document.getElementById('outputModal');
+            if (!modal.classList.contains('hidden')) {
+                console.log('Output modal is open, updating content');
+                const content = document.getElementById('outputContent');
+                content.innerHTML = ansiToHtml(scriptOutputs[data.script_id]);
+
+                // Auto-scroll to bottom
+                content.scrollTop = content.scrollHeight;
+            } else {
+                console.log('Output modal is closed, output buffered');
+            }
+        }
+
+        function handleProcessComplete(data) {
+            console.log('handleProcessComplete called for script:', data.script_id);
+            console.log('Return code:', data.return_code);
+            console.log('runningScripts before delete:', Array.from(runningScripts));
+
+            runningScripts.delete(data.script_id);
+            // Don't hide output button - just disable stop button
+            updateScriptUIComplete(data.script_id);
+
+            console.log('runningScripts after delete:', Array.from(runningScripts));
+
+            const message = data.return_code === 0 ? 'completed successfully' : `exited with code ${data.return_code}`;
+
+            // Append completion message to output
+            if (!scriptOutputs[data.script_id]) {
+                scriptOutputs[data.script_id] = '';
+            }
+            scriptOutputs[data.script_id] += `\n\n--- Process ${message} ---\n`;
+
+            console.log('Final output for', data.script_id, ':', scriptOutputs[data.script_id].substring(0, 100) + '...');
+        }
+
+        function handleScriptError(data) {
+            console.log('handleScriptError called for script:', data.script_id);
+            console.log('Error message:', data.message);
+
+            // Remove from running scripts
+            runningScripts.delete(data.script_id);
+            updateScriptUI(data.script_id, false);
+
+            // Append error message to output
+            if (!scriptOutputs[data.script_id]) {
+                scriptOutputs[data.script_id] = '';
+            }
+            scriptOutputs[data.script_id] += `\n\n❌ ERROR: ${data.message}\n\n--- Script encountered an error ---\n`;
+
+            // Show output modal with error
+            showOutput(data.script_id);
+        }
+
+        function updateScriptUI(scriptId, isRunning) {
+            const runBtn = document.getElementById(`run-${scriptId}`);
+            const runningDiv = document.getElementById(`running-${scriptId}`);
+            const stopBtn = document.getElementById(`stop-${scriptId}`);
+
+            if (isRunning) {
+                runBtn.classList.add('hidden');
+                runningDiv.classList.remove('hidden');
+                if (stopBtn) stopBtn.disabled = false;
+            } else {
+                runBtn.classList.remove('hidden');
+                runningDiv.classList.add('hidden');
+            }
+        }
+
+        function updateScriptUIComplete(scriptId) {
+            // When process completes, hide Stop button but keep Output button visible
+            const runBtn = document.getElementById(`run-${scriptId}`);
+            const runningDiv = document.getElementById(`running-${scriptId}`);
+            const outputBtn = document.getElementById(`output-${scriptId}`);
+            const stopBtn = document.getElementById(`stop-${scriptId}`);
+
+            console.log('updateScriptUIComplete for', scriptId);
+
+            // Show Run button
+            if (runBtn) {
+                runBtn.classList.remove('hidden');
+                console.log('Showed Run button');
+            }
+
+            // Keep running div visible but hide Stop button
+            if (runningDiv) {
+                runningDiv.classList.remove('hidden');
+                console.log('Kept running div visible');
+            }
+
+            // Keep Output button visible
+            if (outputBtn) {
+                outputBtn.classList.remove('hidden');
+                console.log('Output button is visible');
+            }
+
+            // Hide Stop button
+            if (stopBtn) {
+                stopBtn.classList.add('hidden');
+                console.log('Hid Stop button');
+            }
+        }
+
+        function openScriptUrl(url) {
+            window.open(url, '_blank');
+        }
+
+        // File Browser Functions
+        async function openFileBrowser(inputId, mode) {
+            currentBrowserInputId = inputId;
+            currentBrowserMode = mode;
+            selectedEntryPath = null;  // Reset selection when opening browser
+
+            // Get current value from input as starting path
+            const input = document.getElementById(inputId);
+            const currentValue = input.value.trim();
+
+            // Determine starting path
+            if (currentValue && currentValue.startsWith('/')) {
+                // If input has a path, try to start there or its parent directory
+                currentBrowsePath = currentValue;
+                // If it's a file path, navigate to its directory
+                if (mode === 'file' && !currentValue.endsWith('/')) {
+                    currentBrowsePath = currentValue.substring(0, currentValue.lastIndexOf('/')) || '/';
+                }
+            } else {
+                // Default to configured path
+                currentBrowsePath = DEFAULT_BROWSE_PATH;
+            }
+
+            // Update modal title
+            const title = document.getElementById('fileBrowserTitle');
+            title.textContent = mode === 'folder' ? 'Browse Server Folders' : 'Browse Server Files';
+
+            const modeText = document.getElementById('fileBrowserMode');
+            modeText.textContent = mode === 'folder' ? 'Select a folder' : 'Select a file';
+
+            // Show modal
+            const modal = document.getElementById('fileBrowserModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // Load directory contents
+            await loadDirectory(currentBrowsePath);
+        }
+
+        function closeFileBrowser() {
+            const modal = document.getElementById('fileBrowserModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            // Clear manual input
+            document.getElementById('manualPathInput').value = '';
+        }
+
+        async function loadDirectory(path) {
+            const fileList = document.getElementById('fileList');
+            const loading = document.getElementById('fileListLoading');
+            const error = document.getElementById('fileListError');
+            const empty = document.getElementById('fileListEmpty');
+
+            // Show loading state
+            fileList.innerHTML = '';
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            empty.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to load directory');
+                }
+
+                const data = await response.json();
+                currentBrowsePath = data.current_path;
+
+                // Update breadcrumb
+                updateBreadcrumb(data.current_path);
+
+                // Update manual path input
+                document.getElementById('manualPathInput').value = data.current_path;
+
+                // Hide loading
+                loading.classList.add('hidden');
+
+                // Render entries
+                if (data.entries.length === 0) {
+                    empty.classList.remove('hidden');
+                } else {
+                    renderFileList(data.entries, data.parent_path);
+                }
+
+            } catch (err) {
+                console.error('Error loading directory:', err);
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+                document.getElementById('fileListErrorMsg').textContent = err.message;
+            }
+        }
+
+        function updateBreadcrumb(path) {
+            const breadcrumb = document.getElementById('breadcrumbNav');
+            breadcrumb.innerHTML = '';
+
+            if (path === '/') {
+                breadcrumb.innerHTML = `
+                    <button onclick="loadDirectory('/')" class="px-2 py-1 text-slate-700 hover:bg-slate-200 rounded">
+                        /
+                    </button>
+                `;
+                return;
+            }
+
+            const parts = path.split('/').filter(p => p);
+            let currentPath = '';
+
+            // Root
+            breadcrumb.innerHTML += `
+                <button onclick="loadDirectory('/')" class="px-2 py-1 text-slate-700 hover:bg-slate-200 rounded">
+                    /
+                </button>
+            `;
+
+            // Each part
+            parts.forEach((part, index) => {
+                currentPath += '/' + part;
+                const isLast = index === parts.length - 1;
+
+                breadcrumb.innerHTML += `
+                    <span class="text-slate-400">/</span>
+                    <button
+                        onclick="loadDirectory('${currentPath}')"
+                        class="px-2 py-1 ${isLast ? 'text-blue-600 font-semibold' : 'text-slate-700 hover:bg-slate-200'} rounded"
+                    >
+                        ${escapeHtml(part)}
+                    </button>
+                `;
+            });
+        }
+
+        function highlightEntry(entryPath) {
+            // Remove previous highlight
+            document.querySelectorAll('#fileList > div').forEach(div => {
+                div.classList.remove('bg-blue-100', 'border-2', 'border-blue-500');
+            });
+
+            // Highlight the selected entry
+            selectedEntryPath = entryPath;
+
+            // Update manual path input to show selected path
+            document.getElementById('manualPathInput').value = entryPath;
+
+            // Find and highlight the div
+            document.querySelectorAll('#fileList > div').forEach(div => {
+                if (div.getAttribute('data-path') === entryPath) {
+                    div.classList.add('bg-blue-100', 'border-2', 'border-blue-500');
+                }
+            });
+        }
+
+        function renderFileList(entries, parentPath) {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            // Add parent directory entry if not at root
+            if (parentPath) {
+                const parentDiv = document.createElement('div');
+                parentDiv.className = 'flex items-center gap-3 p-3 hover:bg-slate-100 rounded-lg cursor-pointer';
+                parentDiv.onclick = () => loadDirectory(parentPath);
+                parentDiv.innerHTML = `
+                    <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span class="font-semibold text-slate-600">..</span>
+                    <span class="text-sm text-slate-500">(Parent Directory)</span>
+                `;
+                fileList.appendChild(parentDiv);
+            }
+
+            // Sort: directories first, then files
+            entries.sort((a, b) => {
+                if (a.is_directory && !b.is_directory) return -1;
+                if (!a.is_directory && b.is_directory) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            // Render each entry
+            entries.forEach(entry => {
+                const entryDiv = document.createElement('div');
+                entryDiv.setAttribute('data-path', entry.path);
+
+                const isSelectable = (currentBrowserMode === 'folder' && entry.is_directory) ||
+                                     (currentBrowserMode === 'file' && !entry.is_directory);
+
+                const canNavigate = entry.is_directory;
+
+                entryDiv.className = `flex items-center gap-3 p-3 rounded-lg ${
+                    isSelectable ? 'hover:bg-blue-50 cursor-pointer' :
+                    canNavigate ? 'hover:bg-slate-100 cursor-pointer' :
+                    ''
+                }`;
+
+                // Icon
+                const icon = entry.is_directory ? `
+                    <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                    </svg>
+                ` : `
+                    <svg class="w-6 h-6 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                    </svg>
+                `;
+
+                // Size (only for files)
+                const sizeStr = entry.is_directory ? '' : `
+                    <span class="text-sm text-slate-500">${formatFileSize(entry.size)}</span>
+                `;
+
+                entryDiv.innerHTML = `
+                    ${icon}
+                    <span class="flex-1 font-medium text-slate-700">${escapeHtml(entry.name)}</span>
+                    ${sizeStr}
+                `;
+
+                // Click handlers
+                if (isSelectable) {
+                    // Single click: highlight/select
+                    entryDiv.onclick = () => highlightEntry(entry.path);
+
+                    // Double click: for folders, navigate into them
+                    if (canNavigate) {
+                        entryDiv.ondblclick = () => loadDirectory(entry.path);
+                    }
+                } else if (canNavigate) {
+                    // For non-selectable folders (in file mode), double-click to navigate
+                    entryDiv.ondblclick = () => loadDirectory(entry.path);
+                }
+
+                fileList.appendChild(entryDiv);
+            });
+        }
+
+        function selectPath() {
+            let pathToSelect;
+
+            // Priority: manual input > highlighted entry > current directory
+            const manualInput = document.getElementById('manualPathInput');
+            const manualValue = manualInput.value.trim();
+
+            if (manualValue) {
+                // User typed a path manually
+                pathToSelect = manualValue;
+            } else if (selectedEntryPath) {
+                // User highlighted an entry
+                pathToSelect = selectedEntryPath;
+            } else {
+                // Nothing selected, use current directory
+                pathToSelect = currentBrowsePath;
+            }
+
+            // Populate the original input field
+            const targetInput = document.getElementById(currentBrowserInputId);
+            if (targetInput) {
+                targetInput.value = pathToSelect;
+            }
+
+            closeFileBrowser();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // ─── Config Editor ──────────────────────────────────────────────────────────
+
+        let configEditId = null;            // null = new script, string = editing id
+        let configFormParams = [];          // parameter list for the form
+        let configIdManuallyEdited = false; // prevent auto-id overwriting user edits
+
+        function openConfigEditor() {
+            document.getElementById('configModal').classList.remove('hidden');
+            showConfigList();
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        async function showConfigList() {
+            document.getElementById('configListView').classList.remove('hidden');
+            document.getElementById('configFormView').classList.add('hidden');
+            document.getElementById('configFormFooter').classList.add('hidden');
+            document.getElementById('configBackBtn').classList.add('hidden');
+            document.getElementById('configModalTitle').textContent = 'Manage Scripts';
+
+            try {
+                const response = await fetch('/api/config');
+                const cfgScripts = await response.json();
+                renderConfigScriptsList(cfgScripts);
+            } catch (err) {
+                document.getElementById('configScriptsList').innerHTML =
+                    `<div class="p-8 text-center text-red-500">Failed to load: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderConfigScriptsList(cfgScripts) {
+            const container = document.getElementById('configScriptsList');
+            if (!cfgScripts.length) {
+                container.innerHTML = '<div class="p-8 text-center text-slate-400">No scripts yet. Add one!</div>';
+                return;
+            }
+            container.innerHTML = cfgScripts.map(s => `
+                <div class="flex items-center gap-3 p-4 hover:bg-slate-50">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-slate-800 truncate">${escapeHtml(s.name)}</div>
+                        <div class="text-xs text-slate-400 font-mono truncate">${escapeHtml(s.id)}</div>
+                        ${s.description ? `<div class="text-sm text-slate-500 truncate">${escapeHtml(s.description)}</div>` : ''}
+                    </div>
+                    ${s.category ? `<span class="text-xs px-2 py-0.5 rounded-full ${getCategoryColor(s.category)} whitespace-nowrap flex-shrink-0">${escapeHtml(s.category)}</span>` : ''}
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button onclick="showScriptForm('${escapeHtml(s.id)}')"
+                            class="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded" title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <button onclick="deleteConfigScript('${escapeHtml(s.id)}')"
+                            class="p-2 text-slate-400 hover:text-red-600 transition-colors rounded" title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function showScriptForm(scriptId) {
+            configEditId = scriptId;
+            configIdManuallyEdited = false;
+
+            document.getElementById('configListView').classList.add('hidden');
+            document.getElementById('configFormView').classList.remove('hidden');
+            document.getElementById('configFormFooter').classList.remove('hidden');
+            document.getElementById('configBackBtn').classList.remove('hidden');
+            document.getElementById('configModalTitle').textContent = scriptId ? 'Edit Script' : 'Add New Script';
+
+            if (scriptId) {
+                try {
+                    const response = await fetch('/api/config');
+                    const cfgScripts = await response.json();
+                    const s = cfgScripts.find(x => x.id === scriptId);
+                    if (s) {
+                        document.getElementById('cfName').value = s.name || '';
+                        document.getElementById('cfId').value = s.id || '';
+                        document.getElementById('cfCategory').value = s.category || '';
+                        document.getElementById('cfDescription').value = s.description || '';
+                        document.getElementById('cfCommand').value = s.command || '';
+                        document.getElementById('cfWorkingDir').value = s.working_directory || '';
+                        document.getElementById('cfUrl').value = s.url || '';
+                        configFormParams = (s.parameters || []).map(p => ({ ...p }));
+                        configIdManuallyEdited = true;
+                    }
+                } catch (err) {
+                    alert('Failed to load script: ' + err.message);
+                    return;
+                }
+            } else {
+                ['cfName','cfId','cfCategory','cfDescription','cfCommand','cfWorkingDir','cfUrl'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el.tagName === 'TEXTAREA') el.value = '';
+                    else el.value = '';
+                });
+                configFormParams = [];
+            }
+            renderConfigParams();
+        }
+
+        function autoFillId() {
+            if (!configIdManuallyEdited) {
+                const name = document.getElementById('cfName').value;
+                const id = name.toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                document.getElementById('cfId').value = id;
+            }
+        }
+
+        function addConfigParam() {
+            configFormParams.push({ name: '', label: '', type: 'text', required: false, default: '', description: '', placeholder: '' });
+            renderConfigParams();
+        }
+
+        function removeConfigParam(index) {
+            configFormParams.splice(index, 1);
+            renderConfigParams();
+        }
+
+        function updateConfigParam(index, field, value) {
+            if (configFormParams[index] !== undefined) {
+                configFormParams[index][field] = value;
+            }
+        }
+
+        function renderConfigParams() {
+            const container = document.getElementById('cfParams');
+            if (!configFormParams.length) {
+                container.innerHTML = '<p class="text-sm text-slate-400 italic py-2">No parameters. Click "Add Parameter" to let users provide input.</p>';
+                return;
+            }
+            container.innerHTML = configFormParams.map((p, i) => `
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase">Parameter ${i + 1}</span>
+                        <button type="button" onclick="removeConfigParam(${i})"
+                            class="text-slate-400 hover:text-red-500 transition-colors p-1 rounded" title="Remove">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Label <span class="text-red-500">*</span></label>
+                            <input type="text" value="${escapeHtml(p.label || '')}"
+                                oninput="updateConfigParam(${i}, 'label', this.value)"
+                                placeholder="Input File"
+                                class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Type</label>
+                            <select onchange="updateConfigParam(${i}, 'type', this.value)"
+                                class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="text" ${(p.type||'text')==='text'?'selected':''}>Text</option>
+                                <option value="number" ${p.type==='number'?'selected':''}>Number</option>
+                                <option value="file-browser" ${p.type==='file-browser'?'selected':''}>File Browser</option>
+                                <option value="folder-browser" ${p.type==='folder-browser'?'selected':''}>Folder Browser</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Flag / Name</label>
+                            <input type="text" value="${escapeHtml(p.name || '')}"
+                                oninput="updateConfigParam(${i}, 'name', this.value)"
+                                placeholder="--input or empty for positional"
+                                class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-xs text-slate-400 mt-0.5">--flag or empty for positional arg</p>
+                        </div>
+                        <div class="flex items-center gap-2 pt-5">
+                            <input type="checkbox" id="cfp_req_${i}" ${p.required ? 'checked' : ''}
+                                onchange="updateConfigParam(${i}, 'required', this.checked)"
+                                class="w-4 h-4 text-blue-600 border-slate-300 rounded">
+                            <label for="cfp_req_${i}" class="text-sm font-medium text-slate-700 cursor-pointer">Required</label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Default Value</label>
+                            <input type="text" value="${escapeHtml(String(p.default || ''))}"
+                                oninput="updateConfigParam(${i}, 'default', this.value)"
+                                placeholder="optional"
+                                class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Placeholder</label>
+                            <input type="text" value="${escapeHtml(p.placeholder || '')}"
+                                oninput="updateConfigParam(${i}, 'placeholder', this.value)"
+                                placeholder="hint text..."
+                                class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Description / Help Text</label>
+                        <input type="text" value="${escapeHtml(p.description || '')}"
+                            oninput="updateConfigParam(${i}, 'description', this.value)"
+                            placeholder="Shown under the input to guide the user"
+                            class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function saveScriptForm() {
+            const name = document.getElementById('cfName').value.trim();
+            const id = document.getElementById('cfId').value.trim();
+            const category = document.getElementById('cfCategory').value.trim();
+            const description = document.getElementById('cfDescription').value.trim();
+            const command = document.getElementById('cfCommand').value.trim();
+            const workingDir = document.getElementById('cfWorkingDir').value.trim();
+            const url = document.getElementById('cfUrl').value.trim();
+
+            if (!name) { alert('Display Name is required.'); document.getElementById('cfName').focus(); return; }
+            if (!id)   { alert('ID is required.'); document.getElementById('cfId').focus(); return; }
+            if (!command) { alert('Command is required.'); document.getElementById('cfCommand').focus(); return; }
+
+            const script = { id, name, command };
+            if (category) script.category = category;
+            if (description) script.description = description;
+            if (workingDir) script.working_directory = workingDir;
+            if (url) script.url = url;
+
+            const params = configFormParams.filter(p => p.label.trim());
+            if (params.length) {
+                script.parameters = params.map(p => {
+                    const param = { name: p.name || '', label: p.label.trim(), type: p.type || 'text' };
+                    if (p.required) param.required = true;
+                    if (p.default) param.default = p.default;
+                    if (p.description) param.description = p.description;
+                    if (p.placeholder) param.placeholder = p.placeholder;
+                    return param;
+                });
+            }
+
+            try {
+                const isEdit = Boolean(configEditId);
+                const response = await fetch(
+                    isEdit ? `/api/config/scripts/${configEditId}` : '/api/config/scripts',
+                    { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(script) }
+                );
+                const data = await response.json();
+                if (response.ok) {
+                    await loadScripts();
+                    await showConfigList();
+                } else {
+                    alert('Error: ' + (data.detail || 'Failed to save'));
+                }
+            } catch (err) {
+                alert('Failed to save: ' + err.message);
+            }
+        }
+
+        async function deleteConfigScript(scriptId) {
+            if (!confirm(`Delete this script?\n\nThis removes it from the config and cannot be undone.`)) return;
+            try {
+                const response = await fetch(`/api/config/scripts/${scriptId}`, { method: 'DELETE' });
+                if (response.ok) {
+                    await loadScripts();
+                    await showConfigList();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.detail || 'Failed to delete'));
+                }
+            } catch (err) {
+                alert('Failed to delete: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

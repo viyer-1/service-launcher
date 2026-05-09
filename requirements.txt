@@ -1,0 +1,18 @@
+# Python dependencies for Script Runner - FastAPI Version
+# Install with: pip install -r requirements.txt
+
+# Web Framework
+fastapi==0.109.0
+
+# ASGI Server
+uvicorn[standard]==0.27.0
+
+# WebSocket support (included in FastAPI/Starlette)
+# websockets - installed as uvicorn dependency
+
+# YAML parsing
+PyYAML==6.0.1
+
+# Optional: Production deployment
+# gunicorn with uvicorn workers
+gunicorn==21.2.0

@@ -1,0 +1,45 @@
+# Service Launcher - Open Source Example Configuration
+
+scripts:
+  - id: system-info
+    name: System Status
+    description: Quick overview of hostname, uptime, and disk usage
+    category: System
+    command: "./examples/system_info.sh"
+    working_directory: "."
+
+  - id: network-check
+    name: Network Connectivity
+    description: Ping a target address to verify network access
+    category: Tools
+    command: "./examples/network_check.sh"
+    parameters:
+      - name: ""
+        label: Target IP/Hostname
+        description: Address to ping (default: 8.8.8.8)
+        type: text
+        required: false
+        placeholder: "8.8.8.8"
+
+  - id: log-viewer
+    name: Log Viewer
+    description: View the end of a system log file
+    category: System
+    command: "./examples/log_viewer.sh"
+    parameters:
+      - name: ""
+        label: Number of Lines
+        type: number
+        required: false
+        placeholder: "20"
+      - name: ""
+        label: File Path
+        type: file-browser
+        required: false
+        placeholder: "/var/log/syslog"
+
+  - id: process-monitor
+    name: Process Monitor
+    description: Show top CPU-consuming processes
+    category: System
+    command: "./examples/process_monitor.sh"
