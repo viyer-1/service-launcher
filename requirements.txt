@@ -1,4 +1,4 @@
-# Python dependencies for Script Runner - FastAPI Version
+# Python dependencies for Service Launcher - FastAPI Version
 # Install with: pip install -r requirements.txt
 
 # Web Framework
@@ -12,6 +12,9 @@ uvicorn[standard]==0.27.0
 
 # YAML parsing
 PyYAML==6.0.1
+
+# Environment variables
+python-dotenv==1.0.1
 
 # Optional: Production deployment
 # gunicorn with uvicorn workers

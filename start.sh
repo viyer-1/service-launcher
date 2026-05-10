@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launcher script for Script Runner (FastAPI + Frontend)
+# Launcher script for Service Launcher (FastAPI + Frontend)
 
 set -e  # Exit on error
 
@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 echo ""
 echo "======================================"
-echo "  Script Runner Launcher"
+echo "  Service Launcher Launcher"
 echo "======================================"
 echo ""
 
@@ -24,7 +24,7 @@ elif [[ -f "$(dirname "$0")/venv/bin/activate" ]]; then
     VENV_DIR="$(dirname "$0")/venv"
 else
     echo -e "${RED}✗ No virtual environment found.${NC}"
-    echo "  Run: bash install.sh   to set everything up automatically."
+    echo "  Run: bash installation/install.sh   to set everything up automatically."
     exit 1
 fi
 

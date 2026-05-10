@@ -11,6 +11,9 @@ ENV/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Linting & Testing
+.ruff_cache/
+
 # Environment variables
 .env
 .env.local
@@ -38,6 +41,9 @@ logs/
 *.pem
 *.key
 *.crt
+
+# Runtime state
+web_app_clients.json
 
 # User-specific config (you may want to track this)
 # Uncomment the line below if you want to ignore your config

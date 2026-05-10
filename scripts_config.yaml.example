@@ -1,45 +1,82 @@
-# Service Launcher - Open Source Example Configuration
+# Service Launcher — Example Configuration
+#
+# This file defines all scripts that can be executed through the web interface.
+# Copy this file to scripts_config.yaml and customise it.
+#
+# The web UI also has a built-in script editor (gear icon, top-right) if you
+# prefer not to edit YAML directly.
 
 scripts:
-  - id: system-info
-    name: System Status
-    description: Quick overview of hostname, uptime, and disk usage
-    category: System
-    command: "./examples/system_info.sh"
-    working_directory: "."
 
-  - id: network-check
-    name: Network Connectivity
-    description: Ping a target address to verify network access
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. Simple script — no parameters
+  # ─────────────────────────────────────────────────────────────────────────
+  - id: system-uptime
+    name: System Uptime
+    description: Shows how long the system has been running
+    category: System
+    command: "uptime -p"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. Script with parameters
+  # ─────────────────────────────────────────────────────────────────────────
+  - id: ping-host
+    name: Ping Host
+    description: Ping a host to check if it's reachable
     category: Tools
-    command: "./examples/network_check.sh"
+    command: "ping -c 4"
     parameters:
-      - name: ""
-        label: Target IP/Hostname
-        description: Address to ping (default: 8.8.8.8)
+      - name: ""              # empty = positional argument (appended after command)
+        label: Hostname or IP
         type: text
-        required: false
-        placeholder: "8.8.8.8"
+        required: true
+        placeholder: "google.com"
+        description: The host to ping
 
-  - id: log-viewer
-    name: Log Viewer
-    description: View the end of a system log file
-    category: System
-    command: "./examples/log_viewer.sh"
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. Web application — shows an "Open" button after starting
+  # ─────────────────────────────────────────────────────────────────────────
+  - id: example-webapp
+    name: Example Web App
+    description: Start a local web server (Python)
+    category: Development
+    command: "python3 ./examples/example_webapp.py"
     parameters:
-      - name: ""
-        label: Number of Lines
+      - name: "--port"
+        label: Port
         type: number
         required: false
-        placeholder: "20"
+        placeholder: "8080"
+    url: "http://localhost:8080"   # auto-replaced with server IP for remote access
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 4. File-based processing
+  # ─────────────────────────────────────────────────────────────────────────
+  - id: log-viewer
+    name: Log Viewer
+    description: Read the end of a specific log file
+    category: System
+    command: "tail -n"
+    parameters:
       - name: ""
-        label: File Path
+        label: Lines
+        type: number
+        required: true
+        placeholder: "50"
+      - name: ""
+        label: Log File
         type: file-browser
-        required: false
+        required: true
         placeholder: "/var/log/syslog"
 
-  - id: process-monitor
-    name: Process Monitor
-    description: Show top CPU-consuming processes
-    category: System
-    command: "./examples/process_monitor.sh"
+# ─────────────────────────────────────────────────────────────────────────
+# Categories (affects card colour in the UI)
+#   System      → Purple
+#   Development → Blue
+#   Database    → Green
+#   Web         → Orange
+#   Multimedia  → Pink
+#   AI          → Teal
+#   Tools       → Gray (default for anything else)
+# ─────────────────────────────────────────────────────────────────────────
+

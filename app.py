@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script Runner Web Interface - FastAPI Version
+Service Launcher Web Interface - FastAPI Version
 A web-based interface for executing local scripts with live output streaming.
 Uses FastAPI with native WebSockets for reliable async operation.
 """
@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict, Set, List, Optional
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,12 +28,15 @@ import logging
 import urllib.request
 import urllib.error
 
+# Load environment variables from .env file
+load_dotenv()
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('script_runner.log'),
+        logging.FileHandler('service_launcher.log'),
         logging.StreamHandler()
     ]
 )
@@ -496,18 +500,18 @@ async def cleanup_all_processes():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle app lifecycle events."""
-    logger.info("Starting Script Runner...")
+    logger.info("Starting Service Launcher...")
     # Clear stale client registrations from previous server sessions.
     # All previously registered sessions are orphaned after a restart.
     save_web_app_clients({})
     logger.info("Cleared stale web app client registrations from previous session.")
     yield
-    logger.info("Shutting down Script Runner...")
+    logger.info("Shutting down Service Launcher...")
     await cleanup_all_processes()
 
 
 # Create FastAPI app
-app = FastAPI(title="Script Runner", lifespan=lifespan)
+app = FastAPI(title="Service Launcher", lifespan=lifespan)
 
 # Enable CORS
 app.add_middleware(
@@ -1080,7 +1084,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         await websocket.send_json({
             'type': 'connected',
-            'message': 'Connected to script runner'
+            'message': 'Connected to service launcher'
         })
 
         # Listen for messages to subscribe to specific scripts
@@ -1155,7 +1159,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("SERVICE_LAUNCHER_PORT", 5000))
-    logger.info(f"Starting Script Runner with FastAPI + Uvicorn on port {port}...")
+    logger.info(f"Starting Service Launcher with FastAPI + Uvicorn on port {port}...")
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
