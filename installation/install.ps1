@@ -2,9 +2,9 @@
 # Creates a Task Scheduler task so the app starts automatically at login.
 #
 # Usage (run from PowerShell as the current user, NOT as Administrator):
-#   powershell -ExecutionPolicy Bypass -File install.ps1
-#   powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall
-#   powershell -ExecutionPolicy Bypass -File install.ps1 -Port 8080
+#   powershell -ExecutionPolicy Bypass -File installation\install.ps1
+#   powershell -ExecutionPolicy Bypass -File installation\install.ps1 -Uninstall
+#   powershell -ExecutionPolicy Bypass -File installation\install.ps1 -Port 8080
 
 param(
     [switch]$Uninstall,
@@ -15,8 +15,8 @@ $ErrorActionPreference = "Stop"
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$AppDir     = Join-Path $ScriptRoot "v3"
-$VenvDir    = Join-Path $env:USERPROFILE ".venvs\main"
+$AppDir     = Split-Path -Parent $ScriptRoot
+$VenvDir    = Join-Path $env:USERPROFILE ".venvs\service-launcher"
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 $VenvPip    = Join-Path $VenvDir "Scripts\pip.exe"
 $AppScript  = Join-Path $AppDir "app.py"
@@ -76,7 +76,7 @@ Write-Host "========================================"
 Write-Header "1. Checking requirements"
 
 if (-not (Test-Path $AppDir)) {
-    Write-Err "v3\ directory not found at $AppDir"
+    Write-Err " directory not found at $AppDir"
     Write-Err "Run this script from the service-launcher repository root."
     exit 1
 }
@@ -193,7 +193,7 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
-    -Description "Service Launcher - Web-based script runner on port $Port" `
+    -Description "Service Launcher - Web Dashboard on port $Port" `
     -RunLevel Highest | Out-Null
 
 Write-Success "Task '$TaskName' registered (runs at login, hidden)"
@@ -247,6 +247,6 @@ Write-Host ""
 Write-Host "  View logs: $AppDir\script_runner.log"
 Write-Host ""
 Write-Host "  To uninstall:"
-Write-Host "  powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall"
+Write-Host "  powershell -ExecutionPolicy Bypass -File installation\install.ps1 -Uninstall"
 Write-Host "========================================"
 Write-Host ""

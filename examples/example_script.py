@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Example script for testing Script Runner
+Example script for testing Service Launcher
 This script demonstrates how parameters are passed and output is streamed
 """
 
