@@ -1,11 +1,11 @@
 # Bug Fixes and Improvements
 
-This document outlines all the critical fixes applied to make the Script Runner production-ready.
+This document outlines all the critical fixes applied to make the Service Launcher production-ready.
 
 ## Critical Bugs Fixed
 
 ### 1. ✅ Positional Arguments Now Work Correctly
-**Location**: `script_runner.py:75-81`
+**Location**: `app.py:75-81`
 
 **Problem**: Parameters with empty string names (`""`) were being added to the command list as empty strings, breaking commands like:
 ```bash
@@ -29,7 +29,7 @@ else:
 ---
 
 ### 2. ✅ Command Parsing Handles Spaces and Quotes
-**Location**: `script_runner.py:58-63`
+**Location**: `app.py:58-63`
 
 **Problem**: Simple `command.split()` broke paths with spaces:
 ```python
@@ -79,7 +79,7 @@ for (const input of inputs) {
 ---
 
 ### 4. ✅ Race Condition in Process Management
-**Location**: `script_runner.py:128-147`
+**Location**: `app.py:128-147`
 
 **Problem**: Lock was released before WebSocket emit completed, allowing race conditions:
 ```python
@@ -113,7 +113,7 @@ with process_lock:
 ## Production Features Added
 
 ### 5. ✅ Cleanup on Exit
-**Location**: `script_runner.py:314-357`
+**Location**: `app.py:314-357`
 
 **Added**:
 - Signal handlers for SIGINT and SIGTERM
@@ -128,7 +128,7 @@ with process_lock:
 ---
 
 ### 6. ✅ Memory Overflow Handling
-**Location**: `script_runner.py:85-165`
+**Location**: `app.py:85-165`
 
 **Server-side** (5MB threshold):
 - Monitors output size during streaming
@@ -151,7 +151,7 @@ with process_lock:
 ## Security Improvements
 
 ### 7. ✅ Enhanced Command Injection Protection
-**Location**: `script_runner.py:70-73`
+**Location**: `app.py:70-73`
 
 **Added dangerous characters to blacklist**:
 - `>` and `<` (redirection)
@@ -192,7 +192,7 @@ python3 test_fixes.py
 ---
 
 ### 9. ✅ WebSocket Namespace in Background Threads
-**Location**: `script_runner.py:166-203`
+**Location**: `app.py:166-203`
 
 **Problem**: Output was being captured in logs but not streaming to the browser UI. WebSocket `emit()` calls from background threads require explicit namespace parameter.
 
@@ -245,7 +245,7 @@ Before deploying:
 
 ## Files Modified
 
-1. **script_runner.py**
+1. **app.py**
    - Added imports: `shlex`, `tempfile`, `atexit`
    - Fixed `sanitize_command()` function
    - Enhanced `stream_output()` with temp file support

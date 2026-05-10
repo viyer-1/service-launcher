@@ -6,63 +6,76 @@ A web-based dashboard for running and monitoring local scripts from any device o
 
 ## Quick Start
 
-### 1. Clone and install
+### 1. Clone the repository
 
 ```bash
 git clone <this-repo>
-cd service-launcher
-bash install.sh
+cd service-launcher-os
 ```
 
-The installer will:
-- Check for Python 3.8+
-- Create a virtual environment
-- Install dependencies
-- Install and start a systemd service (runs on boot)
-- Print the URL to visit
+### 2. Run the installer for your OS
 
-### 2. Open the dashboard
+The installer creates a virtual environment, installs dependencies, and registers the app to run automatically on boot (Linux) or login (macOS/Windows).
+
+#### Linux
+```bash
+bash installation/install.sh
+```
+
+#### macOS
+```bash
+bash installation/install-mac.sh
+```
+
+#### Windows (PowerShell)
+```powershell
+powershell -ExecutionPolicy Bypass -File installation\install.ps1
+```
+
+### 3. Open the dashboard
 
 After installation, open your browser and go to:
 
 ```
-http://<your-server-ip>:5000
+http://localhost:5000
 ```
 
-The installer prints the exact URL. You can also find your server's IP with:
-
-```bash
-hostname -I | awk '{print $1}'
-```
-
-### 3. Add your scripts
-
-Click the **"Manage Scripts"** gear button (top-right of the dashboard) to add, edit, or remove scripts — no YAML editing required.
+To access it from other devices on your network, use your server's local IP (the installer will print this).
 
 ---
 
 ## Managing the Service
 
+### Linux (systemd)
 ```bash
-sudo systemctl start script-runner
-sudo systemctl stop script-runner
-sudo systemctl restart script-runner
-sudo systemctl status script-runner
-journalctl -u script-runner -f       # live logs
+sudo systemctl start service-launcher
+sudo systemctl stop service-launcher
+sudo systemctl restart service-launcher
+sudo systemctl status service-launcher
+journalctl -u service-launcher -f       # live logs
 ```
+
+### macOS (launchctl)
+```bash
+launchctl start com.service-launcher
+launchctl stop com.service-launcher
+tail -f script_runner.log               # live logs
+```
+
+### Windows
+- Starts automatically at login.
+- To manage the background task, search for **Task Scheduler** (`taskschd.msc`) in the Start menu.
+- For a manual foreground launch, double-click the `start.bat` file in the project folder.
 
 To uninstall:
-
-```bash
-bash install.sh --uninstall
-```
+- **Linux/macOS:** Run the install script with the `--uninstall` flag.
+- **Windows:** Run the PowerShell script with the `-Uninstall` switch.
 
 ---
 
 ## Running Manually (Development)
 
 ```bash
-cd v3
 ./start.sh        # activates venv and starts on port 5000
 ```
 
@@ -70,14 +83,14 @@ cd v3
 
 ## Configuration
 
-Scripts are defined in `v3/scripts_config.yaml`. The web UI's **Manage Scripts** panel writes to this file automatically.
+Scripts are defined in `scripts_config.yaml`. The web UI's **Manage Scripts** panel writes to this file automatically.
 
-If you prefer to edit YAML directly, a commented example is in `v3/scripts_config.yaml.example`. The config is hot-reloaded on every page load — no server restart needed.
+If you prefer to edit YAML directly, a commented example is in `scripts_config.yaml.example`. The config is hot-reloaded on every page load — no server restart needed.
 
 ### Custom Port
 
 ```bash
-bash install.sh --port=8080
+bash installation/install.sh --port=8080
 ```
 
 Or set `SERVICE_LAUNCHER_PORT=8080` in the environment when running manually.
@@ -156,7 +169,7 @@ Built with:
 - **Tailwind CSS** — single-page frontend, no build step
 - **systemd** — production process management
 
-See `CLAUDE.md` for developer architecture notes.
+See `DEVELOPER.md` for developer notes.
 
 ---
 

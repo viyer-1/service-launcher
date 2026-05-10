@@ -1,7 +1,6 @@
 # Service Launcher — Developer Notes
 
-For architecture and internal details maintained for Claude Code, see `CLAUDE.md`.
-This file documents deployment configurations, security hardening options, advanced usage patterns, and planned future enhancements.
+This file documents architecture, deployment configurations, security hardening options, advanced usage patterns, and planned future enhancements.
 
 ---
 
@@ -167,7 +166,7 @@ hostname -I                   # find server IP
 
 1. Check paths in `scripts_config.yaml`
 2. Check script permissions: `chmod +x /path/to/script.sh`
-3. Check logs: `journalctl -u script-runner -f` or `v3/script_runner.log`
+3. Check logs: `journalctl -u service-launcher -f` or `service_launcher.log`
 
 ### WebSocket / live output not working
 
@@ -192,7 +191,7 @@ username ALL=(ALL) NOPASSWD: /path/to/specific/command
 These are planned or considered features, not yet implemented:
 
 - **User authentication** — built-in login page with session management
-- **Client-side file upload** — upload files from browser for one-off processing (full design in `/home/vinay/.claude/plans/client-side-upload-plan.md`)
+- **Client-side file upload** — upload files from browser for one-off processing
 - **Script scheduling / cron** — run scripts on a schedule from the UI
 - **Run history and logs** — persistent log of past executions with timestamps and exit codes
 - **Environment variable management** — per-script env vars configurable in the UI
