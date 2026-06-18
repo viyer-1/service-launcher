@@ -16,7 +16,7 @@ scripts:
     parameters:
       - name: ""
         label: Target IP/Hostname
-        description: Address to ping (default: 8.8.8.8)
+        description: "Address to ping (default: 8.8.8.8)"
         type: text
         required: false
         placeholder: "8.8.8.8"
